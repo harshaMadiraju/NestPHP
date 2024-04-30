@@ -1,0 +1,15 @@
+{
+  "name": "harsha/nestphp",
+  "autoload": {
+    "psr-4": {
+      "NestPHP\\": "src/",
+      "App\\": "app/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Harsha Vardhan M"
+    }
+  ],
+  "require": {}
+}
