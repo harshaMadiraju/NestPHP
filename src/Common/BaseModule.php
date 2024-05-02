@@ -2,40 +2,51 @@
 
 namespace NestPHP\Common;
 
+use NestPHP\Routing\Route;
+use NestPHP\Routing\Router;
+use ReflectionClass;
+
 class BaseModule extends Module{
 
-    private $controllers;
-    private $providers;
+    private $controllers=[];
+    private $providers=[];
+    private Router $router;
 
     public function __construct(){
-        $reflectionClass = new \ReflectionClass($this);
+
+        $this->registerModule();
+        $this->router = new Router($this->controllers,$this->providers);
+    }
+
+    private function registerModule(){
+        $reflectionClass = new ReflectionClass($this);
         $docComment = $reflectionClass->getDocComment();
-        
         if($docComment){
             if(preg_match("/@Module\((.*)\)/s", $docComment, $matches)){
                 if(!empty($matches[1])){
                     $matches[1] = preg_replace("/[\*]+/","", $matches[1]);
                     $config = json_decode($matches[1],true);
+                    
                     if($config!==null){
-                        $this->configure($config);
+                        $this->configureModuleRegistration($config);
                     }
                 }
             }
         }
     }
 
-    protected function configure($config){
+    protected function configureModuleRegistration($config){
         if(isset($config["controllers"]) && isset($config["providers"])){
             if(count($config["controllers"]) == count($config['providers'])){
                 foreach($config["controllers"] as $controllerClass){
-                    $this->assign($controllerClass,"Controller");
+                    $this->assignDependencyClasses($controllerClass,"Controller");
                 }
                 
                 foreach($config["providers"] as $providerClass){
-                    $this->assign($providerClass,"Service");
+                    $this->assignDependencyClasses($providerClass,"Service");
                 }
                 
-                $this->instantiate();
+                // $this->instantiateDependencyClass();
             }
             else{
                 throw new \Exception("Each Controller Class Must have an Service Class");
@@ -44,7 +55,7 @@ class BaseModule extends Module{
 
     }
 
-    private function assign($class,$type){
+    private function assignDependencyClasses($class,$type){
         $class = str_replace("::class","", $class);
         $fully_qualified_class_name  = "App\\$class";       
         switch($type){
@@ -52,10 +63,9 @@ class BaseModule extends Module{
             case "Service": $this->providers[] = $fully_qualified_class_name; break;
         }
     }
-
-    private function instantiate(){
-        for($i= 0;$i<count($this->controllers);$i++){
-            $this->controller = new $this->controllers[$i](new $this->providers[$i]);
-        }
+    
+    public function handleRequest(string $method, string $path): mixed {
+        return $this->router->handleRequest($method, $path);
     }
+
 }

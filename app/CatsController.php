@@ -2,6 +2,9 @@
 
 namespace App;
 
+use NestPHP\Routing\Route;
+
+#[Route(method: 'GET', path: '/cats')]
 class CatsController{
 
     private $service;
@@ -10,6 +13,7 @@ class CatsController{
         $this->service = $service;
     }
 
+    #[Route(method: 'GET', path: '/meow')]
     public function meow(){
         $this->service->meow();
     }
