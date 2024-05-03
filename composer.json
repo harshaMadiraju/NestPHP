@@ -11,5 +11,7 @@
       "name": "Harsha Vardhan M"
     }
   ],
-  "require": {}
+  "require": {
+    "illuminate/database": "^10.48"
+  }
 }
