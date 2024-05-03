@@ -1,6 +1,6 @@
 <?php
 
-namespace NestPHP\Routing;
+namespace NestPHP\Routing\Attributes;
 
 use Attribute;
 

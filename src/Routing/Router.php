@@ -2,52 +2,49 @@
 
 namespace NestPHP\Routing;
 
+use NestPHP\Routing\Attributes\Route;
 use ReflectionClass;
 use ReflectionMethod;
 
 class Router {
     private array $routes = [];
-    private array $controllers = [];
-    private array $providers = [];
 
-    public function __construct($controllers,$providers) {
-        $this->controllers = $controllers;
-        $this->providers = $providers;
-        $this->registerRoutes();
-    }
-
-    private function registerRoutes(): void {
-        $index = 0;
-        foreach ($this->controllers as $controllerClass) {
+    public function registerRoutes(array $controllers, array $providers): void {
+        foreach ($controllers as $index => $controllerClass) {
             $reflectionClass = new ReflectionClass($controllerClass);
-            $attributes = $reflectionClass->getAttributes();
-            foreach ($attributes as $attribute) {
-                $attributeName = $attribute->getName(); // ex: Route
-                $attributeParams = $attribute->getArguments(); // class attributes sucha as method and path
-                // echo "Attribute: $attributeName, Parameters: "; print_r($attributeParams);
+            $classAttributes = $reflectionClass->getAttributes();
+            
+            // Extract class route prefix
+            $routePrefix = '';
+            foreach ($classAttributes as $attribute) {
+                if (basename($attribute->getName()) === 'Route') {
+                    // echo  basename($attribute->getName());
+                    $routePrefix = $attribute->getArguments()[0];
+                    break;
+                }
             }
-
+    
             $methods = $reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC);
-
+            
             foreach ($methods as $method) {
                 $routeAnnotation = $this->getMethodRouteAnnotation($method);
                 if ($routeAnnotation) {
+                    // Assuming $providers is an array of corresponding service classes
+                    $providerClass = $providers[$index];
                     $this->addRoute(
                         $routeAnnotation->method,
-                        $attributeParams['path'].$routeAnnotation->path,
+                        $routePrefix . $routeAnnotation->path,
                         $controllerClass,
                         $method->name,
-                        $this->providers[$index]
+                        $providerClass
                     );
                 }
             }
-
-            $index++;
         }
     }
-
+    
     private function getMethodRouteAnnotation(ReflectionMethod $method): ?Route {
-        $attributes = $method->getAttributes(Route::class);
+        $attributes = $method->getAttributes();
         return !empty($attributes) ? $attributes[0]->newInstance() : null;
     }
 
@@ -56,9 +53,6 @@ class Router {
     }
 
     public function handleRequest(string $method, string $path): mixed {
-        echo $method." => ".$path."<br/>";
-        echo "<pre>";print_r($this->routes);echo "</pre>";
-        exit;
         if (isset($this->routes[$method][$path])) {
             $route = $this->routes[$method][$path];
             $controller = new $route['controller'](new $route['provider']);

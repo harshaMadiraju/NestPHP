@@ -1,71 +1,64 @@
 <?php
 
 namespace NestPHP\Common;
-
-use NestPHP\Routing\Route;
 use NestPHP\Routing\Router;
 use ReflectionClass;
 
-class BaseModule extends Module{
+class BaseModule {
+    protected $controllers = [];
+    protected $providers = [];
 
-    private $controllers=[];
-    private $providers=[];
-    private Router $router;
+    private $router;
 
-    public function __construct(){
-
-        $this->registerModule();
-        $this->router = new Router($this->controllers,$this->providers);
+    public function __construct() {
+        // Read and parse annotations for all modules
+        $this->readAndParseAnnotations();
+        $this->router = new Router();
+        $this->router->registerRoutes($this->controllers,$this->providers);
     }
 
-    private function registerModule(){
-        $reflectionClass = new ReflectionClass($this);
-        $docComment = $reflectionClass->getDocComment();
-        if($docComment){
-            if(preg_match("/@Module\((.*)\)/s", $docComment, $matches)){
-                if(!empty($matches[1])){
-                    $matches[1] = preg_replace("/[\*]+/","", $matches[1]);
-                    $config = json_decode($matches[1],true);
-                    
-                    if($config!==null){
-                        $this->configureModuleRegistration($config);
+    private function readAndParseAnnotations() {
+        // Directory where modules are located
+        $modulesDirectory = __DIR__ . '/../../app';
+
+        // Scan module directories
+        $moduleFolders = scandir($modulesDirectory);
+        foreach ($moduleFolders as $folder) {
+            if ($folder !== '.' && $folder !== '..' && is_dir("$modulesDirectory/$folder")) {
+               $namespace_suffix = $folder;
+                // Look for module files within the directory folder
+                // Because all modules must be specied as NameModule.php
+                $moduleFiles = glob("$modulesDirectory/$folder/*Module*.php");
+                foreach ($moduleFiles as $file) {
+                    $className = basename($file,".php");
+                    $className = "\\App\\$namespace_suffix\\$className";
+                    $reflectionClass = new ReflectionClass($className);
+                    $docComment = $reflectionClass->getDocComment();
+                    if($docComment){
+                        if(preg_match("/@Module\((.*)\)/s", $docComment, $matches)){
+                            if(!empty($matches[1])){
+                                $matches[1] = preg_replace("/[\*]+/","", $matches[1]);
+                                $config = json_decode($matches[1],true);
+                                if($config!==null){
+                                    $this->configureModuleRegistration($config,"\\App\\$namespace_suffix\\");
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    protected function configureModuleRegistration($config){
-        if(isset($config["controllers"]) && isset($config["providers"])){
-            if(count($config["controllers"]) == count($config['providers'])){
-                foreach($config["controllers"] as $controllerClass){
-                    $this->assignDependencyClasses($controllerClass,"Controller");
-                }
-                
-                foreach($config["providers"] as $providerClass){
-                    $this->assignDependencyClasses($providerClass,"Service");
-                }
-                
-                // $this->instantiateDependencyClass();
-            }
-            else{
-                throw new \Exception("Each Controller Class Must have an Service Class");
-            }
-        }
-
-    }
-
-    private function assignDependencyClasses($class,$type){
-        $class = str_replace("::class","", $class);
-        $fully_qualified_class_name  = "App\\$class";       
-        switch($type){
-            case "Controller": $this->controllers[] = $fully_qualified_class_name; break;
-            case "Service": $this->providers[] = $fully_qualified_class_name; break;
+    private function configureModuleRegistration(array $config,string $namespace) {
+        if (isset($config["controllers"]) && isset($config["providers"])) {
+            // Merge controllers and providers from config
+            $this->controllers = array_merge($this->controllers,array_map(function($x) use($namespace){ return $namespace.str_replace("::class","",$x); }, $config["controllers"]));
+            $this->providers = array_merge($this->providers, array_map(function($x) use($namespace){ return $namespace.str_replace("::class","",$x); }, $config["providers"]));
         }
     }
-    
+
     public function handleRequest(string $method, string $path): mixed {
         return $this->router->handleRequest($method, $path);
     }
-
 }

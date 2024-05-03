@@ -12,9 +12,9 @@ $module = new BaseModule();
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_SERVER['REQUEST_URI'];
 
-echo $method." yes ";
-echo $path." path ";
-exit;
+// echo $method." yes ";
+// echo $path." path ";
+// exit;
 
 // Handle the incoming request
 $response = $module->handleRequest($method, $path);
