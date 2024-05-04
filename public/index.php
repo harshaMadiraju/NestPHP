@@ -1,12 +1,12 @@
 <?php
 
-use NestPHP\Common\BaseModule;
+use NestPHP\Common\Application;
 
 require_once "../vendor/autoload.php";
 
 
 // Create an instance of BaseModule (or your specific module class)
-$module = new BaseModule();
+$app = new Application();
 
 // Extract the HTTP method and requested URI
 $method = $_SERVER['REQUEST_METHOD'];
@@ -17,7 +17,7 @@ $path = $_SERVER['REQUEST_URI'];
 // exit;
 
 // Handle the incoming request
-$response = $module->handleRequest($method, $path);
+$response = $app->handleRequest($method, $path);
 
 // Output the response
 echo $response;

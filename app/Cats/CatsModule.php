@@ -2,7 +2,7 @@
 
 namespace App\Cats;
 
-use NestPHP\Common\BaseModule;
+use NestPHP\Common\Application;
 
 /**
  * @Module({

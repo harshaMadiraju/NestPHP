@@ -1,20 +1,27 @@
 <?php
 
 namespace NestPHP\Common;
+use NestPHP\Database\Connection;
+use NestPHP\Database\Schema;
 use NestPHP\Routing\Router;
 use ReflectionClass;
 
-class BaseModule {
+class Application {
     protected $controllers = [];
     protected $providers = [];
 
     private $router;
+    private $db;
 
     public function __construct() {
         // Read and parse annotations for all modules
         $this->readAndParseAnnotations();
         $this->router = new Router();
         $this->router->registerRoutes($this->controllers,$this->providers);
+        
+        $this->db = new Connection();
+        $this->db->bootEloquent();
+        $this->registerSchemas();
     }
 
     private function readAndParseAnnotations() {
@@ -60,5 +67,11 @@ class BaseModule {
 
     public function handleRequest(string $method, string $path): mixed {
         return $this->router->handleRequest($method, $path);
+    }
+
+    private function registerSchemas()
+    {
+        $schema = new Schema($this->db->getCapsule());
+        $schema->registerSchemas();
     }
 }
